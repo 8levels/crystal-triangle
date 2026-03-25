@@ -23,3 +23,19 @@ export type RankedResult = {
   isPriority: boolean
   isDeferred: boolean
 }
+
+export type HistoryRankedResult = {
+  rank: number
+  letter: string
+  label: string
+  votes: number
+  isPriority: boolean
+  isDeferred: boolean
+}
+
+export type HistoryEntry = {
+  id: string
+  timestamp: string
+  items: Item[]
+  results: HistoryRankedResult[]
+}

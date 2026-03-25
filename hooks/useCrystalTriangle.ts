@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { assignLetters, buildPairs, rankResults, tallyVotes } from '@/lib/crystalTriangle'
+import { saveSession } from '@/lib/history'
 import type { Item, RankedResult, Session } from '@/types'
 
 const STORAGE_KEY = 'ct_session'
@@ -43,13 +44,17 @@ function loadStored(): AppState | null {
 export function useCrystalTriangle() {
   const [state, setState] = useState<AppState>(initialAppState)
   const [hydrated, setHydrated] = useState(false)
+  const previousPhaseRef = useRef<Session['phase']>('input')
 
   const session = state.session
   const compareIndex = state.compareIndex
 
   useEffect(() => {
     const stored = loadStored()
-    if (stored) setState(stored)
+    if (stored) {
+      setState(stored)
+      previousPhaseRef.current = stored.session.phase
+    }
     setHydrated(true)
   }, [])
 
@@ -165,6 +170,19 @@ export function useCrystalTriangle() {
     const votes = tallyVotes(session.pairs, session.choices)
     return rankResults(session.items, votes)
   }, [session])
+
+  useEffect(() => {
+    if (!hydrated) return
+    const previousPhase = previousPhaseRef.current
+    const didTransitionToResults =
+      previousPhase !== 'results' && session.phase === 'results'
+
+    if (didTransitionToResults && results.length > 0) {
+      saveSession(session.items, results)
+    }
+
+    previousPhaseRef.current = session.phase
+  }, [session.phase, session.items, results, hydrated])
 
   const progress = useMemo(() => {
     if (session.phase !== 'compare') return { current: 0, total: 0 }
