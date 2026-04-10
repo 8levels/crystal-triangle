@@ -14,6 +14,8 @@ export type Session = {
   pairs: Pair[]
   choices: Record<number, number>
   phase: 'input' | 'compare' | 'results'
+  resultOrder?: string[]
+  doneItems?: Record<string, boolean>
 }
 
 export type RankedResult = {
@@ -22,6 +24,7 @@ export type RankedResult = {
   rank: number
   isPriority: boolean
   isDeferred: boolean
+  isDone?: boolean
 }
 
 export type HistoryRankedResult = {

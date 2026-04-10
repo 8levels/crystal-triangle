@@ -5,11 +5,11 @@ import { ComparePhase } from "@/components/ComparePhase";
 import { InputPhase } from "@/components/InputPhase";
 import { ResultsPhase } from "@/components/ResultsPhase";
 import { useCrystalTriangle } from "@/hooks/useCrystalTriangle";
-import { loadHistory } from "@/lib/history";
+import { deleteSession, loadHistory, subscribeHistory } from "@/lib/history";
+import { getStreak } from "@/lib/streak";
 import type { HistoryEntry } from "@/types";
 
 const MAX_ITEMS = 20;
-const HISTORY_KEY = "ct_history";
 
 function ordinal(n: number): string {
   const j = n % 10;
@@ -42,6 +42,9 @@ export default function Home() {
     compareIndex,
     addItem,
     removeItem,
+    rerunWithItems,
+    reorderResults,
+    setResultDone,
     startComparing,
     vote,
     goBack,
@@ -55,19 +58,25 @@ export default function Home() {
     {}
   );
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
     setHistory(loadHistory());
+    setStreak(getStreak());
   }, [session.phase, results.length]);
+
+  useEffect(() => {
+    return subscribeHistory(() => {
+      setHistory(loadHistory());
+    });
+  }, []);
 
   const toggleEntry = (entryId: string) => {
     setExpandedHistory((prev) => ({ ...prev, [entryId]: !prev[entryId] }));
   };
 
   const deleteEntry = (entryId: string) => {
-    const next = history.filter((entry) => entry.id !== entryId);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
-    setHistory(next);
+    deleteSession(entryId);
     setExpandedHistory((prev) => {
       const copy = { ...prev };
       delete copy[entryId];
@@ -76,6 +85,7 @@ export default function Home() {
   };
 
   const hasHistory = useMemo(() => history.length > 0, [history.length]);
+  const streakLabel = streak > 1 ? `${streak} day streak` : "";
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -83,6 +93,7 @@ export default function Home() {
         <h1 className="text-2xl font-semibold tracking-tight text-black">
           Crystal Triangle
         </h1>
+        {streakLabel && <p className="mt-1 text-xs text-[#666]">{streakLabel}</p>}
         <p className="mt-2 text-sm text-[#666]">
           Add tasks, compare every pair, surface your top three priorities.
         </p>
@@ -127,6 +138,19 @@ export default function Home() {
                           {formatHistoryDate(entry.timestamp)}
                         </p>
                         <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const labels =
+                                entry.items.length > 0
+                                  ? entry.items.map((item) => item.label)
+                                  : entry.results.map((result) => result.label);
+                              rerunWithItems(labels);
+                            }}
+                            className="min-h-[44px] border border-[#e5e5e5] px-3 text-sm text-black hover:border-black"
+                          >
+                            re-run
+                          </button>
                           <button
                             type="button"
                             onClick={() => toggleEntry(entry.id)}
@@ -235,6 +259,8 @@ export default function Home() {
       {session.phase === "results" && (
         <ResultsPhase
           results={results}
+          onReorder={reorderResults}
+          onSetDone={setResultDone}
           onRestart={restart}
           onRevise={reviseComparisons}
         />

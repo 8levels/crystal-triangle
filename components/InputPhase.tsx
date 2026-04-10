@@ -39,6 +39,7 @@ export function InputPhase({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
         <input
           type="text"
+          autoFocus
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={onKeyDown}
